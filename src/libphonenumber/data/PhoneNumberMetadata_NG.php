@@ -129,7 +129,7 @@ return array (
               0[2-9]|
               1\\d
             )\\d|
-            90[2359]\\d
+            90[23589]\\d
           )\\d{6}
         ',
     'PossibleNumberPattern' => '\\d{8,10}',
