@@ -1,6 +1,7 @@
 # libphonenumber for PHP [![Build Status](https://img.shields.io/travis/giggsey/libphonenumber-for-php.svg?style=flat-square)](https://travis-ci.org/giggsey/libphonenumber-for-php) [![Coverage Status](https://img.shields.io/coveralls/giggsey/libphonenumber-for-php.svg?style=flat-square)](https://coveralls.io/r/giggsey/libphonenumber-for-php?branch=master)
 
-[![Total Downloads](https://img.shields.io/packagist/dt/giggsey/libphonenumber-for-php.svg?style=flat-square)](https://packagist.org/packages/giggsey/libphonenumber-for-php)
+[![Total Downloads](https://poser.pugx.org/giggsey/libphonenumber-for-php/downloads?format=flat-square)](https://packagist.org/packages/giggsey/libphonenumber-for-php)
+[![Downloads per month](https://img.shields.io/packagist/dm/giggsey/libphonenumber-for-php.svg?style=flat-square)](https://packagist.org/packages/giggsey/libphonenumber-for-php)
 [![Latest Stable Version](https://img.shields.io/packagist/v/giggsey/libphonenumber-for-php.svg?style=flat-square)](https://packagist.org/packages/giggsey/libphonenumber-for-php)
 [![License](http://img.shields.io/badge/license-Apache%202.0-red.svg?style=flat-square)](https://packagist.org/packages/giggsey/libphonenumber-for-php)
 
@@ -20,6 +21,8 @@ A PHP library for parsing, formatting, storing and validating international phon
 
 ## Installation
 
+PHP versions 5.3 up to PHP 7 are currently supported. HHVM is not yet supported.
+
 The PECL [mbstring](http://php.net/mbstring) extension is required.
 
 It is recommended to use [composer](https://getcomposer.org) to install the library.
@@ -29,6 +32,8 @@ $ composer require giggsey/libphonenumber-for-php
 ```
 
 You can also use any other [PSR-0](https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-0.md) compliant autoloader.
+
+If you do not use composer, ensure that you also load any dependencies that this project has, such as [giggsey/locale](https://github.com/giggsey/Locale).
 
 ## Versioning
 
@@ -106,8 +111,6 @@ echo $phoneUtil->formatOutOfCountryCallingNumber($swissNumberProto, "GB");
 
 ### Geocoder
 
-The PECL [intl](http://php.net/intl) extension is required for the geocoder to be used.
-
 ```php
 $phoneUtil = \libphonenumber\PhoneNumberUtil::getInstance();
 
@@ -171,8 +174,6 @@ var_dump($shortNumberInfo->connectsToEmergencyNumber("911123", "US"));
 ```
 
 ### Mapping Phone Numbers to carrier
-
-The PECL [intl](http://php.net/intl) extension is required for the carrier mapper to be used.
 
 ```php
 

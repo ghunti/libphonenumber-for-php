@@ -9,7 +9,7 @@
 
 namespace libphonenumber;
 
-
+use Giggsey\Locale\Locale;
 use libphonenumber\prefixmapper\PrefixFileReader;
 
 class PhoneNumberToCarrierMapper
@@ -17,25 +17,21 @@ class PhoneNumberToCarrierMapper
     /**
      * @var PhoneNumberToCarrierMapper[]
      */
-    private static $instance = array();
+    protected static $instance = array();
 
     const MAPPING_DATA_DIRECTORY = '/carrier/data/';
 
     /**
      * @var PhoneNumberUtil
      */
-    private $phoneUtil;
+    protected $phoneUtil;
     /**
      * @var PrefixFileReader
      */
-    private $prefixFileReader;
+    protected $prefixFileReader;
 
-    private function __construct($phonePrefixDataDirectory)
+    protected function __construct($phonePrefixDataDirectory)
     {
-        if(!extension_loaded('intl')) {
-            throw new \RuntimeException('The intl extension must be installed');
-        }
-
         $this->prefixFileReader = new PrefixFileReader(dirname(__FILE__) . $phonePrefixDataDirectory);
         $this->phoneUtil = PhoneNumberUtil::getInstance();
     }
@@ -51,11 +47,11 @@ class PhoneNumberToCarrierMapper
      */
     public static function getInstance($mappingDir = self::MAPPING_DATA_DIRECTORY)
     {
-        if (!array_key_exists($mappingDir, self::$instance)) {
-            self::$instance[$mappingDir] = new self($mappingDir);
+        if (!array_key_exists($mappingDir, static::$instance)) {
+            static::$instance[$mappingDir] = new static($mappingDir);
         }
 
-        return self::$instance[$mappingDir];
+        return static::$instance[$mappingDir];
     }
 
     /**
@@ -74,9 +70,9 @@ class PhoneNumberToCarrierMapper
      */
     public function getNameForValidNumber(PhoneNumber $number, $languageCode)
     {
-        $languageStr = \Locale::getPrimaryLanguage($languageCode);
+        $languageStr = Locale::getPrimaryLanguage($languageCode);
         $scriptStr = "";
-        $regionStr = \Locale::getRegion($languageCode);
+        $regionStr = Locale::getRegion($languageCode);
 
         return $this->prefixFileReader->getDescriptionForNumber($number, $languageStr, $scriptStr, $regionStr);
     }
@@ -125,7 +121,7 @@ class PhoneNumberToCarrierMapper
      * @param int $numberType A PhoneNumberType int
      * @return bool
      */
-    private function isMobile($numberType)
+    protected function isMobile($numberType)
     {
         return ($numberType === PhoneNumberType::MOBILE ||
             $numberType === PhoneNumberType::FIXED_LINE_OR_MOBILE ||

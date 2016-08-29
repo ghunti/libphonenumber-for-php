@@ -16,10 +16,8 @@ use libphonenumber\PhoneNumberUtil;
 use libphonenumber\RegionCode;
 use libphonenumber\ValidationResult;
 
-
 class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
 {
-
     const TEST_META_DATA_FILE_PREFIX = "../../../Tests/libphonenumber/Tests/core/data/PhoneNumberMetadataForTesting";
     private static $bsNumber = null;
     private static $internationalTollFree = null;
@@ -151,8 +149,7 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
 
         $this->assertGreaterThan(0, count($globalNetworkCallingCodes));
 
-        foreach ($globalNetworkCallingCodes as $callingCode)
-        {
+        foreach ($globalNetworkCallingCodes as $callingCode) {
             $this->assertGreaterThan(0, $callingCode);
             $this->assertEquals(RegionCode::UN001, $this->phoneUtil->getRegionCodeForCountryCode($callingCode));
         }
@@ -262,11 +259,18 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         // Google London, which has area code "20".
         $this->assertEquals(2, $this->phoneUtil->getLengthOfGeographicalAreaCode(self::$gbNumber));
 
+        // A mobile number in the UK does not have an area code (by default, mobile numbers do not,
+        // unless they have been added to our list of exceptions).
+        $this->assertEquals(0, $this->phoneUtil->getLengthOfGeographicalAreaCode(self::$gbMobile));
+
         // A UK mobile phone, which has no area code.
         $this->assertEquals(0, $this->phoneUtil->getLengthOfGeographicalAreaCode(self::$gbMobile));
 
         // Google Buenos Aires, which has area code "11".
         $this->assertEquals(2, $this->phoneUtil->getLengthOfGeographicalAreaCode(self::$arNumber));
+
+        // A mobile number in Argentina also has an area code.
+        $this->assertEquals(3, $this->phoneUtil->getLengthOfGeographicalAreaCode(self::$arMobile));
 
         // Google Sydney, which has area code "2".
         $this->assertEquals(1, $this->phoneUtil->getLengthOfGeographicalAreaCode(self::$auNumber));
@@ -282,6 +286,12 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
 
         // An international toll free number, which has no area code.
         $this->assertEquals(0, $this->phoneUtil->getLengthOfGeographicalAreaCode(self::$internationalTollFree));
+
+        // A mobile number from China is geographical, but does not have an area code.
+        $cnMobile = new PhoneNumber();
+        $cnMobile->setCountryCode(86)->setNationalNumber('18912341234');
+
+        $this->assertEquals(0, $this->phoneUtil->getLengthOfGeographicalAreaCode($cnMobile));
     }
 
     public function testGetLengthOfNationalDestinationCode()
@@ -320,6 +330,13 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
 
         // An international toll free number, which has NDC "1234".
         $this->assertEquals(4, $this->phoneUtil->getLengthOfNationalDestinationCode(self::$internationalTollFree));
+
+        // A mobile number from China is geographical, but does not have an area code: however it still
+        // can be considered to have a national destination code.
+        $cnMobile= new PhoneNumber();
+        $cnMobile->setCountryCode(86)->setNationalNumber('18912341234');
+
+        $this->assertEquals(3, $this->phoneUtil->getLengthOfNationalDestinationCode($cnMobile));
     }
 
     public function testGetCountryMobileToken()
@@ -1769,7 +1786,6 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($this->phoneUtil->isPossibleNumber("1 3000", RegionCode::GB));
         $this->assertFalse($this->phoneUtil->isPossibleNumber("+44 300", RegionCode::GB));
         $this->assertFalse($this->phoneUtil->isPossibleNumber("+800 1234 5678 9", RegionCode::UN001));
-
     }
 
     public function testTruncateTooLongNumber()
