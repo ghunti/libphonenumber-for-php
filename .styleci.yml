@@ -1,0 +1,17 @@
+preset: psr2
+
+finder:
+  not-path:
+    - "src/libphonenumber/data/"
+    - "src/libphonenumber/carrier/data/"
+    - "src/libphonenumber/geocoding/data/"
+    - "src/libphonenumber/timezone/data/"
+    - "Tests/libphonenumber/Tests/core/data/"
+    - "Tests/libphonenumber/Tests/carrier/data/"
+    - "Tests/libphonenumber/Tests/prefixmapper/data/"
+    - "Tests/libphonenumber/Tests/timezone/data/"
+  not-name:
+    - "CountryCodeToRegionCodeMap.php"
+    - "CountryCodeToRegionCodeMapForTesting.php"
+    - "AlternateFormatsCountryCodeSet.php"
+    - "ShortNumbersRegionCodeSet.php"

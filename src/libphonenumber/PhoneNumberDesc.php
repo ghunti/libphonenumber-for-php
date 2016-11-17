@@ -13,6 +13,89 @@ class PhoneNumberDesc
     protected $possibleNumberPattern = "";
     protected $hasExampleNumber = false;
     protected $exampleNumber = "";
+    /**
+     * @var array
+     */
+    protected $possibleLength;
+    /**
+     * @var array
+     */
+    protected $possibleLengthLocalOnly;
+
+    public function __construct()
+    {
+        $this->clear();
+    }
+
+    /**
+     * @return PhoneNumberDesc
+     */
+    public function clear()
+    {
+        $this->clearNationalNumberPattern();
+        $this->clearPossibleNumberPattern();
+        $this->clearPossibleLength();
+        $this->clearPossibleLengthLocalOnly();
+        $this->clearExampleNumber();
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function getPossibleLength()
+    {
+        return $this->possibleLength;
+    }
+
+    /**
+     * @param array $possibleLength
+     */
+    public function setPossibleLength($possibleLength)
+    {
+        $this->possibleLength = $possibleLength;
+    }
+
+    public function addPossibleLength($possibleLength)
+    {
+        if (!in_array($possibleLength, $this->possibleLength)) {
+            $this->possibleLength[] = $possibleLength;
+        }
+    }
+
+    public function clearPossibleLength()
+    {
+        $this->possibleLength = array();
+    }
+
+    /**
+     * @return array
+     */
+    public function getPossibleLengthLocalOnly()
+    {
+        return $this->possibleLengthLocalOnly;
+    }
+
+    /**
+     * @param array $possibleLengthLocalOnly
+     */
+    public function setPossibleLengthLocalOnly($possibleLengthLocalOnly)
+    {
+        $this->possibleLengthLocalOnly = $possibleLengthLocalOnly;
+    }
+
+    public function addPossibleLengthLocalOnly($possibleLengthLocalOnly)
+    {
+        if (!in_array($possibleLengthLocalOnly, $this->possibleLengthLocalOnly)) {
+            $this->possibleLengthLocalOnly[] = $possibleLengthLocalOnly;
+        }
+    }
+
+    public function clearPossibleLengthLocalOnly()
+    {
+        $this->possibleLengthLocalOnly = array();
+    }
 
     /**
      * @return boolean
@@ -43,6 +126,16 @@ class PhoneNumberDesc
     }
 
     /**
+     * @return PhoneNumberDesc
+     */
+    public function clearNationalNumberPattern()
+    {
+        $this->hasNationalNumberPattern = false;
+        $this->nationalNumberPattern = '';
+        return $this;
+    }
+
+    /**
      * @return boolean
      */
     public function hasPossibleNumberPattern()
@@ -56,6 +149,16 @@ class PhoneNumberDesc
     public function getPossibleNumberPattern()
     {
         return $this->possibleNumberPattern;
+    }
+
+    /**
+     * @return PhoneNumberDesc
+     */
+    public function clearPossibleNumberPattern()
+    {
+        $this->hasPossibleNumberPattern = false;
+        $this->possibleNumberPattern = '';
+        return $this;
     }
 
     /**
@@ -99,6 +202,17 @@ class PhoneNumberDesc
     }
 
     /**
+     * @return PhoneNumberDesc
+     */
+    public function clearExampleNumber()
+    {
+        $this->hasExampleNumber = false;
+        $this->exampleNumber = '';
+
+        return $this;
+    }
+
+    /**
      * @param PhoneNumberDesc $other
      * @return PhoneNumberDesc
      */
@@ -113,6 +227,8 @@ class PhoneNumberDesc
         if ($other->hasExampleNumber()) {
             $this->setExampleNumber($other->getExampleNumber());
         }
+        $this->setPossibleLength($other->getPossibleLength());
+        $this->setPossibleLengthLocalOnly($other->getPossibleLengthLocalOnly());
 
         return $this;
     }
@@ -144,6 +260,9 @@ class PhoneNumberDesc
             $data['ExampleNumber'] = $this->getExampleNumber();
         }
 
+        $data['PossibleLength'] = $this->getPossibleLength();
+        $data['PossibleLengthLocalOnly'] = $this->getPossibleLengthLocalOnly();
+
         return $data;
     }
 
@@ -162,6 +281,8 @@ class PhoneNumberDesc
         if (isset($input['ExampleNumber']) && $input['NationalNumberPattern'] != '') {
             $this->setExampleNumber($input['ExampleNumber']);
         }
+        $this->setPossibleLength($input['PossibleLength']);
+        $this->setPossibleLengthLocalOnly($input['PossibleLengthLocalOnly']);
 
         return $this;
     }

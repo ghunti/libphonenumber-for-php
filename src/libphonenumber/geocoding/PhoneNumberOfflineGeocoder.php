@@ -25,6 +25,10 @@ class PhoneNumberOfflineGeocoder
      */
     protected $prefixFileReader = null;
 
+    /**
+     * PhoneNumberOfflineGeocoder constructor.
+     * @param string $phonePrefixDataDirectory
+     */
     protected function __construct($phonePrefixDataDirectory)
     {
         $this->phoneUtil = PhoneNumberUtil::getInstance();
@@ -87,7 +91,7 @@ class PhoneNumberOfflineGeocoder
      * number is from. If it could be from many territories, nothing is returned.
      *
      * @param PhoneNumber $number
-     * @param $locale
+     * @param string $locale
      * @return string
      */
     protected function getCountryNameForNumber(PhoneNumber $number, $locale)
@@ -170,7 +174,7 @@ class PhoneNumberOfflineGeocoder
             $scriptStr = "";
             $regionStr = Locale::getRegion($locale);
 
-            $mobileToken = $this->phoneUtil->getCountryMobileToken($number->getCountryCode());
+            $mobileToken = PhoneNumberUtil::getCountryMobileToken($number->getCountryCode());
             $nationalNumber = $this->phoneUtil->getNationalSignificantNumber($number);
             if ($mobileToken !== "" && (!strncmp($nationalNumber, $mobileToken, strlen($mobileToken)))) {
                 // In some countries, eg. Argentina, mobile numbers have a mobile token before the national

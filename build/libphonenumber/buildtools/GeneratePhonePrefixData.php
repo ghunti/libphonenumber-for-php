@@ -5,6 +5,11 @@ namespace libphonenumber\buildtools;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Output\OutputInterface;
 
+/**
+ * Class GeneratePhonePrefixData
+ * @package libphonenumber\buildtools
+ * @internal
+ */
 class GeneratePhonePrefixData
 {
     const NANPA_COUNTRY_CODE = 1;
@@ -22,14 +27,25 @@ EOT;
     private $filesToIgnore = array('.', '..', '.svn', '.git');
     private $outputDir;
     private $englishMaps = array();
+    private $prefixesToExpand = array(
+        861 => 5,
+        12 => 2,
+        13 => 2,
+        14 => 2,
+        15 => 2,
+        16 => 2,
+        17 => 2,
+        18 => 2,
+        19 => 2,
+    );
 
 
-    public function start($inputDir, $outputDir, OutputInterface $consoleOutput)
+    public function start($inputDir, $outputDir, OutputInterface $consoleOutput, $expandCountries)
     {
         $this->inputDir = $inputDir;
         $this->outputDir = $outputDir;
 
-        $inputOutputMappings = $this->createInputOutputMappings();
+        $inputOutputMappings = $this->createInputOutputMappings($expandCountries);
         $availableDataFiles = array();
 
         $progress = new ProgressBar($consoleOutput, count($inputOutputMappings));
@@ -55,7 +71,7 @@ EOT;
         $progress->finish();
     }
 
-    private function createInputOutputMappings()
+    private function createInputOutputMappings($expandCountries)
     {
         $topLevel = scandir($this->inputDir);
 
@@ -82,7 +98,8 @@ EOT;
                     $outputFiles = $this->createOutputFileNames(
                         $countryCodeFileName,
                         $this->getCountryCodeFromTextFileName($countryCodeFileName),
-                        $languageDirectory
+                        $languageDirectory,
+                        $expandCountries
                     );
 
                     $mappings[$languageDirectory . DIRECTORY_SEPARATOR . $countryCodeFileName] = $outputFiles;
@@ -98,54 +115,51 @@ EOT;
      * from the provided input text file. For the data files expected to be large (currently only
      * NANPA is supported), this method generates a list containing one output file for each area
      * code. Otherwise, a single file is added to the list.
+     * @param string $file
+     * @param string $countryCode
+     * @param string $language
+     * @param bool $expandCountries
+     * @return array
      */
-
-    private function createOutputFileNames($file, $countryCode, $language)
+    private function createOutputFileNames($file, $countryCode, $language, $expandCountries)
     {
         $outputFiles = array();
 
-        if ($countryCode == self::NANPA_COUNTRY_CODE) {
-            // Fetch the 4-digit prefixes stored in the file.
-            $phonePrefixes = array();
-
-            $this->parseTextFile(
-                $this->getFilePathFromLanguageAndCountryCode($language, $countryCode),
-                function ($prefix, $location) use (&$phonePrefixes) {
-                    $shortPrefix = substr($prefix, 0, 4);
-                    if (!in_array($shortPrefix, $phonePrefixes)) {
-                        $phonePrefixes[] = $shortPrefix;
-                    }
-                }
-            );
-
-            foreach ($phonePrefixes as $prefix) {
-                $outputFiles[] = $this->generateFilename($prefix, $language);
-            }
-        } elseif ($countryCode == 86) {
-
-            /*
-             * Reduce memory usage for China numbers
-             * @see https://github.com/giggsey/libphonenumber-for-php/issues/44
-             */
-
-            // Fetch the 5-digit prefixes stored in the file.
-            $phonePrefixes = array();
-
-            $this->parseTextFile(
-                $this->getFilePathFromLanguageAndCountryCode($language, $countryCode),
-                function ($prefix, $location) use (&$phonePrefixes) {
-                    $shortPrefix = substr($prefix, 0, 5);
-                    if (!in_array($shortPrefix, $phonePrefixes)) {
-                        $phonePrefixes[] = $shortPrefix;
-                    }
-                }
-            );
-
-            foreach ($phonePrefixes as $prefix) {
-                $outputFiles[] = $this->generateFilename($prefix, $language);
-            }
-        } else {
+        if ($expandCountries === false) {
             $outputFiles[] = $this->generateFilename($countryCode, $language);
+            return $outputFiles;
+        }
+
+        /*
+         * Reduce memory usage for China numbers
+         * @see https://github.com/giggsey/libphonenumber-for-php/issues/44
+         *
+         * Analytics of the data suggests that the following prefixes need expanding:
+         *  - 861 (to 5 chars)
+         */
+        $phonePrefixes = array();
+        $prefixesToExpand = $this->prefixesToExpand;
+
+        $this->parseTextFile(
+            $this->getFilePathFromLanguageAndCountryCode($language, $countryCode),
+            function ($prefix, $location) use (&$phonePrefixes, $prefixesToExpand, $countryCode) {
+                $length = strlen($countryCode);
+                foreach ($prefixesToExpand as $p => $l) {
+                    if (GeneratePhonePrefixData::startsWith($prefix, $p)) {
+                        // Allow later entries to overwrite initial ones
+                        $length = $l;
+                    }
+                }
+
+                $shortPrefix = substr($prefix, 0, $length);
+                if (!in_array($shortPrefix, $phonePrefixes)) {
+                    $phonePrefixes[] = $shortPrefix;
+                }
+            }
+        );
+
+        foreach ($phonePrefixes as $prefix) {
+            $outputFiles[] = $this->generateFilename($prefix, $language);
         }
 
         return $outputFiles;
@@ -155,8 +169,8 @@ EOT;
      * Reads phone prefix data from the provides file path and invokes the given handler for each
      * mapping read.
      *
-     * @param $filePath
-     * @param $handler
+     * @param string $filePath
+     * @param \Closure $handler
      * @return array
      * @throws \InvalidArgumentException
      */
@@ -194,11 +208,20 @@ EOT;
         return $countryData;
     }
 
+    /**
+     * @param string $language
+     * @param string $code
+     * @return string
+     */
     private function getFilePathFromLanguageAndCountryCode($language, $code)
     {
         return $this->getFilePath($language . DIRECTORY_SEPARATOR . $code . self::DATA_FILE_EXTENSION);
     }
 
+    /**
+     * @param string $fileName
+     * @return string
+     */
     private function getFilePath($fileName)
     {
         $path = $this->inputDir . $fileName;
@@ -206,16 +229,29 @@ EOT;
         return $path;
     }
 
+    /**
+     * @param string $prefix
+     * @param string $language
+     * @return string
+     */
     private function generateFilename($prefix, $language)
     {
         return $language . DIRECTORY_SEPARATOR . $prefix . self::DATA_FILE_EXTENSION;
     }
 
+    /**
+     * @param string $countryCodeFileName
+     * @return string
+     */
     private function getCountryCodeFromTextFileName($countryCodeFileName)
     {
         return str_replace(self::DATA_FILE_EXTENSION, '', $countryCodeFileName);
     }
 
+    /**
+     * @param string $inputFile
+     * @return array
+     */
     private function readMappingsFromFile($inputFile)
     {
         $areaCodeMap = array();
@@ -230,6 +266,10 @@ EOT;
         return $areaCodeMap;
     }
 
+    /**
+     * @param string $textFile
+     * @return mixed
+     */
     private function getLanguageFromTextFile($textFile)
     {
         $parts = explode(DIRECTORY_SEPARATOR, $textFile);
@@ -237,6 +277,10 @@ EOT;
         return $parts[0];
     }
 
+    /**
+     * @param array $mappings
+     * @param string $language
+     */
     private function removeEmptyEnglishMappings(&$mappings, $language)
     {
         if ($language != "en") {
@@ -276,7 +320,7 @@ EOT;
 
     private function getEnglishDataPath($textFile)
     {
-        return "en" . DIRECTORY_SEPARATOR . substr($textFile, 3, 2) . self::DATA_FILE_EXTENSION;
+        return "en" . DIRECTORY_SEPARATOR . substr($textFile, 3);
     }
 
     private function compressAccordingToEnglishData($englishMap, &$nonEnglishMap)
@@ -322,7 +366,6 @@ EOT;
                     break;
                 }
             }
-
 
             if (!array_key_exists($targetFile, $mappingForFiles)) {
                 $mappingForFiles[$targetFile] = array();

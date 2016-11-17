@@ -173,8 +173,14 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("$1 $2 $3", $metadata->getNumberFormat(1)->getFormat());
         $this->assertEquals("[13-689]\\d{9}|2[0-35-9]\\d{8}", $metadata->getGeneralDesc()->getNationalNumberPattern());
         $this->assertEquals("\\d{7}(?:\\d{3})?", $metadata->getGeneralDesc()->getPossibleNumberPattern());
-        $this->assertTrue($metadata->getGeneralDesc()->exactlySameAs($metadata->getFixedLine()));
+        $this->assertEquals("[13-689]\\d{9}|2[0-35-9]\\d{8}", $metadata->getFixedLine()->getNationalNumberPattern());
         $this->assertEquals("\\d{10}", $metadata->getTollFree()->getPossibleNumberPattern());
+        $this->assertCount(1, $metadata->getGeneralDesc()->getPossibleLength());
+        $possibleLength = $metadata->getGeneralDesc()->getPossibleLength();
+        $this->assertEquals(10, $possibleLength[0]);
+        // Possible lengths are the same as the general description, so aren't stored separately in the
+        // toll free element as well.
+        $this->assertCount(0, $metadata->getTollFree()->getPossibleLength());
         $this->assertEquals("900\\d{7}", $metadata->getPremiumRate()->getNationalNumberPattern());
         // No shared-cost data is available, so it should be initialised to "NA".
         $this->assertEquals("NA", $metadata->getSharedCost()->getNationalNumberPattern());
@@ -193,8 +199,15 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("900", $metadata->getNumberFormat(5)->getLeadingDigitsPattern(0));
         $this->assertEquals("(\\d{3})(\\d{3,4})(\\d{4})", $metadata->getNumberFormat(5)->getPattern());
         $this->assertEquals("$1 $2 $3", $metadata->getNumberFormat(5)->getFormat());
+        $this->assertCount(2, $metadata->getGeneralDesc()->getPossibleLengthLocalOnly());
+        $this->assertCount(8, $metadata->getGeneralDesc()->getPossibleLength());
+        // Nothing is present for fixed-line, since it is the same as the general desc, so for
+        // efficiency reasons we don't store an extra value.
+        $this->assertCount(0, $metadata->getFixedLine()->getPossibleLength());
+        $this->assertCount(2, $metadata->getMobile()->getPossibleLength());
+
         $this->assertEquals(
-            "(?:[24-6]\\d{2}|3[03-9]\\d|[789](?:[1-9]\\d|0[2-9]))\\d{1,8}",
+            "(?:[24-6]\\d{2}|3[03-9]\\d|[789](?:0[2-9]|[1-9]\\d))\\d{1,8}",
             $metadata->getFixedLine()->getNationalNumberPattern()
         );
         $this->assertEquals("\\d{2,14}", $metadata->getFixedLine()->getPossibleNumberPattern());
@@ -225,7 +238,8 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(800, $metadata->getCountryCode());
         $this->assertEquals("$1 $2", $metadata->getNumberFormat(0)->getFormat());
         $this->assertEquals("(\\d{4})(\\d{4})", $metadata->getNumberFormat(0)->getPattern());
-        $this->assertEquals("12345678", $metadata->getGeneralDesc()->getExampleNumber());
+        $this->assertCount(0, $metadata->getGeneralDesc()->getPossibleLengthLocalOnly());
+        $this->assertCount(1, $metadata->getGeneralDesc()->getPossibleLength());
         $this->assertEquals("12345678", $metadata->getTollFree()->getExampleNumber());
     }
 
@@ -343,13 +357,13 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
     {
         $this->assertEquals(
             "1",
-            $this->phoneUtil->getCountryMobileToken($this->phoneUtil->getCountryCodeForRegion(RegionCode::MX))
+            PhoneNumberUtil::getCountryMobileToken($this->phoneUtil->getCountryCodeForRegion(RegionCode::MX))
         );
 
         // Country calling code for Sweden, which has no mobile token.
         $this->assertEquals(
             "",
-            $this->phoneUtil->getCountryMobileToken($this->phoneUtil->getCountryCodeForRegion(RegionCode::SE))
+            PhoneNumberUtil::getCountryMobileToken($this->phoneUtil->getCountryCodeForRegion(RegionCode::SE))
         );
     }
 
@@ -375,8 +389,6 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
             $this->phoneUtil->getExampleNumberForType(RegionCode::DE, PhoneNumberType::FIXED_LINE)
         );
         $this->assertEquals(null, $this->phoneUtil->getExampleNumberForType(RegionCode::DE, PhoneNumberType::MOBILE));
-        // For the US, the example number is placed under general description, and hence should be used
-        // for both fixed line and mobile, so neither of these should return null.
         $this->assertNotNull($this->phoneUtil->getExampleNumberForType(RegionCode::US, PhoneNumberType::FIXED_LINE));
         $this->assertNotNull($this->phoneUtil->getExampleNumberForType(RegionCode::US, PhoneNumberType::MOBILE));
         // CS is an invalid region, so we have no data for it.
@@ -397,7 +409,7 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         $input = "1800-ABC-DEF";
         // Alpha chars are converted to digits; everything else is left untouched.
         $expectedOutput = "1800-222-333";
-        $this->assertEquals($expectedOutput, $this->phoneUtil->convertAlphaCharactersInNumber($input));
+        $this->assertEquals($expectedOutput, PhoneNumberUtil::convertAlphaCharactersInNumber($input));
     }
 
     public function testNormaliseRemovePunctuation()
@@ -406,7 +418,7 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         $expectedOutput = "03456234";
         $this->assertEquals(
             $expectedOutput,
-            $this->phoneUtil->normalize($inputNumber),
+            PhoneNumberUtil::normalize($inputNumber),
             "Conversion did not correctly remove punctuation"
         );
     }
@@ -417,7 +429,7 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         $expectedOutput = "034426486479";
         $this->assertEquals(
             $expectedOutput,
-            $this->phoneUtil->normalize($inputNumber),
+            PhoneNumberUtil::normalize($inputNumber),
             "Conversion did not correctly replace alpha characters"
         );
     }
@@ -429,7 +441,7 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         $expectedOutput = "255";
         $this->assertEquals(
             $expectedOutput,
-            $this->phoneUtil->normalize($inputNumber),
+            PhoneNumberUtil::normalize($inputNumber),
             "Conversion did not correctly replace non-latin digits"
         );
         // Eastern-Arabic digits.
@@ -438,7 +450,7 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         $expectedOutput = "520";
         $this->assertEquals(
             $expectedOutput,
-            $this->phoneUtil->normalize($inputNumber),
+            PhoneNumberUtil::normalize($inputNumber),
             "Conversion did not correctly replace non-latin digits"
         );
     }
@@ -449,18 +461,18 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         $expectedOutput = "03456234";
         $this->assertEquals(
             $expectedOutput,
-            $this->phoneUtil->normalizeDigitsOnly($inputNumber),
+            PhoneNumberUtil::normalizeDigitsOnly($inputNumber),
             "Conversion did not correctly remove alpha character"
         );
     }
 
     public function testNormaliseStripNonDiallableCharacters()
     {
-        $inputNumber = "03*4-56&+a#234";
-        $expectedOutput = "03*456+234";
+        $inputNumber = "03*4-56&+1a#234";
+        $expectedOutput = "03*456+1#234";
         $this->assertEquals(
             $expectedOutput,
-            $this->phoneUtil->normalizeDiallableCharsOnly($inputNumber),
+            PhoneNumberUtil::normalizeDiallableCharsOnly($inputNumber),
             "Conversion did not correctly remove non-diallable characters"
         );
     }
@@ -918,11 +930,18 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
             "01234 19 12-5678",
             $this->phoneUtil->formatNationalNumberWithPreferredCarrierCode($arNumber, "")
         );
-        // When the preferred_domestic_carrier_code is present (even when it contains an empty string),
-        // use it instead of the default carrier code passed in.
+        // When the preferred_domestic_carrier_code is present (even when it is just a space), use it
+        // instead of the default carrier code passed in.
+        $arNumber->setPreferredDomesticCarrierCode(" ");
+        $this->assertEquals(
+            "01234   12-5678",
+            $this->phoneUtil->formatNationalNumberWithPreferredCarrierCode($arNumber, "15")
+        );
+        // When the preferred_domestic_carrier_code is present but empty, treat it as unset and use
+        // instead of the default carrier code passed in.
         $arNumber->setPreferredDomesticCarrierCode("");
         $this->assertEquals(
-            "01234 12-5678",
+            "01234 15 12-5678",
             $this->phoneUtil->formatNationalNumberWithPreferredCarrierCode($arNumber, "15")
         );
         // We don't support this for the US so there should be no change.
@@ -1722,7 +1741,7 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($this->phoneUtil->isPossibleNumber("253-0000", RegionCode::US));
         $this->assertTrue($this->phoneUtil->isPossibleNumber("+1 650 253 0000", RegionCode::GB));
         $this->assertTrue($this->phoneUtil->isPossibleNumber("+44 20 7031 3000", RegionCode::GB));
-        $this->assertTrue($this->phoneUtil->isPossibleNumber("(020) 7031 3000", RegionCode::GB));
+        $this->assertTrue($this->phoneUtil->isPossibleNumber("(020) 7031 300", RegionCode::GB));
         $this->assertTrue($this->phoneUtil->isPossibleNumber("7031 3000", RegionCode::GB));
         $this->assertTrue($this->phoneUtil->isPossibleNumber("3331 6005", RegionCode::NZ));
         $this->assertTrue($this->phoneUtil->isPossibleNumber("+800 1234 5678", RegionCode::UN001));
@@ -2865,13 +2884,10 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
             $this->phoneUtil->parse("tel:03-331-6005;isub=12345;phone-context=+64", RegionCode::ZZ)
         );
 
-        // It is important that we set the carrier code to an empty string, since we used
-        // ParseAndKeepRawInput and no carrier code was found.
         $nzNumberWithRawInput = new PhoneNumber();
         $nzNumberWithRawInput->mergeFrom(self::$nzNumber);
         $nzNumberWithRawInput->setRawInput("+64 3 331 6005");
         $nzNumberWithRawInput->setCountryCodeSource(CountryCodeSource::FROM_NUMBER_WITH_PLUS_SIGN);
-        $nzNumberWithRawInput->setPreferredDomesticCarrierCode("");
         $this->assertEquals(
             $nzNumberWithRawInput,
             $this->phoneUtil->parseAndKeepRawInput("+64 3 331 6005", RegionCode::ZZ)
@@ -2995,7 +3011,6 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         $alphaNumericNumber->mergeFrom(self::$alphaNumericNumber);
         $alphaNumericNumber->setRawInput("800 six-flags");
         $alphaNumericNumber->setCountryCodeSource(CountryCodeSource::FROM_DEFAULT_COUNTRY);
-        $alphaNumericNumber->setPreferredDomesticCarrierCode("");
         $this->assertEquals(
             $alphaNumericNumber,
             $this->phoneUtil->parseAndKeepRawInput("800 six-flags", RegionCode::US)
@@ -3003,9 +3018,9 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
 
         $shorterAlphaNumber = new PhoneNumber();
         $shorterAlphaNumber->setCountryCode(1)->setNationalNumber(8007493524);
-        $shorterAlphaNumber->setRawInput("1800 six-flag")->setCountryCodeSource(
-            CountryCodeSource::FROM_NUMBER_WITHOUT_PLUS_SIGN
-        )->setPreferredDomesticCarrierCode("");
+        $shorterAlphaNumber
+            ->setRawInput("1800 six-flag")
+            ->setCountryCodeSource(CountryCodeSource::FROM_NUMBER_WITHOUT_PLUS_SIGN);
         $this->assertEquals(
             $shorterAlphaNumber,
             $this->phoneUtil->parseAndKeepRawInput("1800 six-flag", RegionCode::US)
