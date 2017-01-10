@@ -3,7 +3,7 @@
 
     <property name="build.script" value="build/build.php"/>
 
-    <property name="git.url" value="https://github.com/googlei18n/libphonenumber.git"/>
+    <property name="git.url" value="https://github.com/tiagopinheiro/libphonenumber.git"/>
     <property name="git.path" value="libphonenumber-data-dir"/>
 
     <loadfile property="metadata.version" file="METADATA-VERSION.txt">
@@ -105,6 +105,7 @@
         <gitfetch repository="${git.path}" all="true"/>
         <echo message="Pulling Git project @ ${metadata.version}"/>
 
+        <!-- Comment this when are changing the XML files within libphonenumber-data-dir -->
         <gitcheckout
             repository="${git.path}"
             branchname="${metadata.version}" quiet="false" force="true" />
