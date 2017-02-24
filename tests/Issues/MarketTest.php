@@ -45,6 +45,8 @@ class MarketTest extends \PHPUnit_Framework_TestCase
         $this->validatePhone($countryIso, '09070004364');
         $this->validatePhone($countryIso, '09094821628');
         $this->validatePhone($countryIso, '9050907964');
+        $this->validatePhone($countryIso, '09060607347');
+        $this->validatePhone($countryIso, '09060700244');
     }
 
     /**

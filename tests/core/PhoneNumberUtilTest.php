@@ -376,6 +376,21 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("12345678", $this->phoneUtil->getNationalSignificantNumber(self::$internationalTollFree));
     }
 
+    public function testGetNationalSignificantNumber_ManyLeadingZeros()
+    {
+        $number = new PhoneNumber();
+        $number->setCountryCode(1);
+        $number->setNationalNumber(650);
+        $number->setItalianLeadingZero(true);
+        $number->setNumberOfLeadingZeros(2);
+
+        $this->assertEquals('00650', $this->phoneUtil->getNationalSignificantNumber($number));
+
+        // Set a bad value; we shouldn't crash; we shouldn't output any leading zeros at all;
+        $number->setNumberOfLeadingZeros(-3);
+        $this->assertEquals('650', $this->phoneUtil->getNationalSignificantNumber($number));
+    }
+
     public function testGetExampleNumber()
     {
         $this->assertEquals(self::$deNumber, $this->phoneUtil->getExampleNumber(RegionCode::DE));
@@ -3170,7 +3185,58 @@ class PhoneNumberUtilTest extends \PHPUnit_Framework_TestCase
             $this->phoneUtil->isNumberMatch($nzNumber, self::$nzNumber),
             "Number " . (string)$nzNumber . " did not match " . (string)self::$nzNumber
         );
+    }
 
+    public function testIsNumberMatchShortMatchIfDiffNumLeadingZeros()
+    {
+        $nzNumberOne = new PhoneNumber();
+        $nzNumberTwo = new PhoneNumber();
+        $nzNumberOne->setCountryCode(64)->setNationalNumber(33316005)->setItalianLeadingZero(true);
+        $nzNumberTwo->setCountryCode(64)->setNationalNumber(33316005)->setItalianLeadingZero(true)->setNumberOfLeadingZeros(2);
+
+        $this->assertEquals(MatchType::SHORT_NSN_MATCH, $this->phoneUtil->isNumberMatch($nzNumberOne, $nzNumberTwo));
+
+        $nzNumberOne->setItalianLeadingZero(false)->setNumberOfLeadingZeros(1);
+        $nzNumberTwo->setItalianLeadingZero(true)->setNumberOfLeadingZeros(1);
+
+        // Since one doesn't have the Italian leading zero set to true, we ignore the number of leading zeros present
+        // (1 is in any case the default value)
+        $this->assertEquals(MatchType::SHORT_NSN_MATCH, $this->phoneUtil->isNumberMatch($nzNumberOne, $nzNumberTwo));
+    }
+
+    public function testIsNumberMatchAcceptsProtoDefaultsAsMatch()
+    {
+        $nzNumberOne = new PhoneNumber();
+        $nzNumberTwo = new PhoneNumber();
+
+        $nzNumberOne->setCountryCode(64)->setNationalNumber(33316005)->setItalianLeadingZero(true);
+        // The default for number of leading zeros is 1, so it shouldn't normally be set, however if it
+        // is it should be considered equivalent.
+        $nzNumberTwo->setCountryCode(64)->setNationalNumber(33316005)->setItalianLeadingZero(true)->setNumberOfLeadingZeros(1);
+
+        $this->assertEquals(MatchType::EXACT_MATCH, $this->phoneUtil->isNumberMatch($nzNumberOne, $nzNumberTwo));
+    }
+
+    public function testIsNumberMatchMatchesDiffLeadingZerosIfItalianLeadingZeroFalse()
+    {
+        $nzNumberOne = new PhoneNumber();
+        $nzNumberTwo = new PhoneNumber();
+
+        $nzNumberOne->setCountryCode(64)->setNationalNumber(33316005);
+        // The default for number of leading zeros is 1, so it shouldn't normally be set, however if it
+        // is it should be considered equivalent
+        $nzNumberTwo->setCountryCode(64)->setNationalNumber(33316005)->setNumberOfLeadingZeros(1);
+
+        $this->assertEquals(MatchType::EXACT_MATCH, $this->phoneUtil->isNumberMatch($nzNumberOne, $nzNumberTwo));
+
+        // Even if it is set to ten, it is still equivalent because in both cases
+        // italian leading zero is not true
+        $nzNumberTwo->setNumberOfLeadingZeros(10);
+        $this->assertEquals(MatchType::EXACT_MATCH, $this->phoneUtil->isNumberMatch($nzNumberOne, $nzNumberTwo));
+    }
+
+    public function testIsNumberMatchIgnoresSomeFields()
+    {
         // Check raw_input, country_code_source and preferred_domestic_carrier_code are ignored.
         $brNumberOne = new PhoneNumber();
         $brNumberTwo = new PhoneNumber();
